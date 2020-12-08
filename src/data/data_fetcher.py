@@ -3,6 +3,7 @@ import os
 import json
 import time
 import urllib.request
+import fnmatch
 
 import pandas as pd
 
@@ -110,7 +111,7 @@ def _handle_two_year_transaction_period(
         two_year_transaction_period = int(two_year_transaction_period)
         if two_year_transaction_period % 2 != 0:
             two_year_transaction_period = two_year_transaction_period + 1
-        if two_year_transaction_period in range(2000, 2020):
+        if two_year_transaction_period in range(2004, 2021):
                 return str(two_year_transaction_period)
     print("Invalid input, defaulting to 2020.")
     return "2020"
@@ -153,6 +154,8 @@ class DataFetcher:
         self.api_starting_url_container = _make_api_url(
             two_year_transaction_period, recipient_committee_type
         )
+        self.two_year_transaction_period = two_year_transaction_period
+        self.recipient_committee_type = recipient_committee_type
         self.total_pages = _get_total_pages_for_call(self.api_starting_url_container)
 
         self.starting_url = self.api_starting_url_container.url
@@ -204,13 +207,14 @@ class DataFetcher:
                 self.get_transactions_on_page()
                 
                 self.pages_pulled += 1
-                return self.complete_list
+                
+                
 
             else:
                 print("waiting 1 hour")
                 time.sleep(sleep_timer)
                 self.api_calls_this_hour = 1
-
+            
     def get_next_page(self):
         """
         Adds two items to api_starting_url to get to the next page of transactions.
@@ -268,8 +272,35 @@ class DataFetcher:
                 party,
             ]
             self.complete_list.append(current_list)
-
+            
         self.last_index = self.info["pagination"]["last_indexes"]["last_index"]
         self.last_contribution_receipt_date = self.info["pagination"]["last_indexes"][
             "last_contribution_receipt_date"
         ]
+        
+    def _build_df(self):
+        self.df = pd.DataFrame(
+            self.complete_list,
+            columns=[
+                "contributor_occupation",
+                "contributor_employer",
+                "contributor_city",
+                "contributor_state",
+                "contributor_zip",
+                "party",
+            ],
+        )
+        self.df.fillna(value="", inplace=True)
+        return self.df
+
+    def _save_df_data(self):
+        did_write = False
+        pattern = f"*_{self.recipient_committee_type}_in_{self.two_year_transaction_period}.csv"
+        files = os.listdir("data/")
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                os.remove("data/" + name)
+                self.df.to_csv(f'data/{self.pages_pulled}_of_{self.total_pages}_for_{self.recipient_committee_type}_in_{self.two_year_transaction_period}.csv')
+                did_write = True
+        if did_write != True:
+            self.df.to_csv(f'data/{self.pages_pulled}_of_{self.total_pages}_for_{self.recipient_committee_type}_in_{self.two_year_transaction_period}.csv')

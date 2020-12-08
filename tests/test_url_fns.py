@@ -29,8 +29,8 @@ class TestTransactionPeriod:
         assert expected == result
         assert captured == error_msg
 
-        expected = "2000"
-        result = _handle_two_year_transaction_period("1999")
+        expected = "2004"
+        result = _handle_two_year_transaction_period("2003")
         captured = capsys.readouterr().out
         assert expected == result
         assert captured == ""

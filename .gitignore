@@ -6,3 +6,9 @@ __pycache__/
 env/
 .vscode/
 FEC-Data-Wranglin.code-workspace
+
+# data
+data/*
+
+# keep
+!data/.gitkeep

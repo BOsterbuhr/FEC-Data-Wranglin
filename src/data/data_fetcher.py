@@ -2,7 +2,7 @@ from typing import Union
 import os
 import json
 import time
-import urllib.request
+import requests
 import fnmatch
 
 import pandas as pd
@@ -44,8 +44,8 @@ def _get_total_pages_for_call(api_starting_url_container: APIStartingURLContaine
             + " `api_starting_url_container` object, built from `make_api_url()`"
         )
 
-    uh = urllib.request.urlopen(api_starting_url_container.url)
-    data = uh.read().decode()
+    uh = requests.get(api_starting_url_container.url)
+    data = uh.text
     info = json.loads(data)
 
     pages = info["pagination"]["pages"]
@@ -111,11 +111,7 @@ def _handle_two_year_transaction_period(
         two_year_transaction_period = int(two_year_transaction_period)
         if two_year_transaction_period % 2 != 0:
             two_year_transaction_period = two_year_transaction_period + 1
-<<<<<<< HEAD
         if two_year_transaction_period in range(2004, 2021):
-=======
-        if two_year_transaction_period in range(2000, 2021):
->>>>>>> 565621bf945f3606976ca45196059b87944eeb3d
                 return str(two_year_transaction_period)
     print("Invalid input, defaulting to 2020.")
     return "2020"
@@ -209,7 +205,7 @@ class DataFetcher:
 
                 self.get_next_page()
                 self.get_transactions_on_page()
-                
+
                 self.pages_pulled += 1
                 
                 
@@ -239,8 +235,8 @@ class DataFetcher:
         except:
             url = self.starting_url
 
-        uh = urllib.request.urlopen(url)
-        data = uh.read().decode()
+        uh = requests.get(url)
+        data = uh.text
         self.info = json.loads(data)
 
     def get_transactions_on_page(self):

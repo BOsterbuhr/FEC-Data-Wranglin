@@ -1,7 +1,44 @@
+import pytest
+from unittest.mock import Mock
+
 from src.data.data_fetcher import (
+    _get_total_pages_for_call,
     _handle_two_year_transaction_period,
     _handle_recipient_committee_type,
+    APIStartingURLContainer,
 )
+
+
+@pytest.fixture
+def mock_get_response():
+    """
+    Instead of actually going out and calling the site,
+    this function intercepts `requests.get()` calls and
+    has it read from the staged file, instead
+    """
+    with open("./tests/2020_house.json") as f:
+        return f.read()
+
+
+class TestTotalPagesForCall:
+    def test_bad_data_type(self):
+        with pytest.raises(TypeError):
+            _get_total_pages_for_call("www.google.com")
+
+    def test_get_page_from_json(self, monkeypatch, mock_get_response):
+        """
+        Patched over the site connection code to read from local JSON.
+        This function checks that we find the correct value for
+        ['pagination']['pages']
+        """
+        mock_get = Mock(return_value=Mock(text=mock_get_response))
+        mock_requests = Mock(get=mock_get)
+        monkeypatch.setattr("src.data.data_fetcher.requests", mock_requests)
+
+        expected = 40743
+        result = _get_total_pages_for_call(APIStartingURLContainer("www.google.com"))
+
+        assert result == expected
 
 
 class TestTransactionPeriod:

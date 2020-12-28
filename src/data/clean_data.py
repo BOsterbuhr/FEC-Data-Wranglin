@@ -198,9 +198,15 @@ class DataCleaner:
             left_count = len(self.df.loc[self.df[self.column_name] == left_side])
             right_count = len(self.df.loc[self.df[self.column_name] == right_side])
             for position, column in zip(self.df.index, self.df[self.column_name]):
-                if column == right_side:
-                    if left_count > right_count:
-                        self.df.at[position, self.column_name] = left_side
+                if column == right_side and right_count > left_count:
+                    self.df.at[position, self.column_name] = right_side
+                elif column == right_side:
+                    self.df.at[position, self.column_name] = left_side
+                if column == left_side and left_count > right_count:
+                    self.df.at[position, self.column_name] = left_side
+                elif column == left_side:
+                    self.df.at[position, self.column_name] = right_side
+                    
         #print(len(self.df[self.column_name].unique())) # Uncomment to compare how many values have been combined
         return self.df
 
@@ -228,7 +234,7 @@ def clean_data(path: str, lowest_similarity: float, ngram_size: int):
     column_list = _get_df_columns(df)
     count = 0
     name_list = []
-    skip_list = ["contributor_city", "contributor_state", "contributor_zip", "party"]
+    skip_list = ["contribution_receipt_amount", "contributor_street_address", "contributor_state", "contributor_zip", "party"]
     for i in range(len(column_list)+1):
         name_list.append(f"cleaner{str(i)}")   
     replace = DataCleaner._replace_matches_df

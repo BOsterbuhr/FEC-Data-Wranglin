@@ -1,11 +1,11 @@
 import os
 import json
 import time
+from typing import Union
 import requests
 import fnmatch
 import pandas as pd
-
-
+from src.data.NYC_vars import all_zips
 
 
 class APIStartingURLContainer:
@@ -53,7 +53,7 @@ def _get_total_pages_for_call(api_starting_url_container: APIStartingURLContaine
 
 
 def _make_api_url(
-    two_year_transaction_period: int, recipient_committee_type: str
+    two_year_transaction_period: int, recipient_committee_type: str, contributor_zip: int
 ) -> str:
     """
     Build the `starting_url` to get campaign donation receipt data of individual's donations for a two year time period.
@@ -73,7 +73,7 @@ def _make_api_url(
     """
 
     base_api_url = "https://api.open.fec.gov/v1/schedules/schedule_a/?"
-    set_parameters = "&sort=-contribution_receipt_date&sort_hide_null=true&sort_null_only=false&is_individual=true&contributor_type=individual&per_page=100"
+    set_parameters = "&sort=-contribution_receipt_date&sort_hide_null=true&sort_null_only=false&is_individual=true&contributor_type=individual&per_page=100&recipient_committee_designation=P"
 
     api_key = os.environ.get("FEC_API_KEY")
 
@@ -90,8 +90,10 @@ def _make_api_url(
     recipient_committee_type = _handle_recipient_committee_type(
         recipient_committee_type
     )
+    
+    contributor_zip = _handle_contributor_zip_code(contributor_zip)
 
-    starting_url = (f"{base_api_url}two_year_transaction_period={two_year_transaction_period}&api_key={api_key}&recipient_committee_type={recipient_committee_type}{set_parameters}"
+    starting_url = (f"{base_api_url}two_year_transaction_period={two_year_transaction_period}&api_key={api_key}&recipient_committee_type={recipient_committee_type}&contributor_zip={contributor_zip}{set_parameters}"
     )
     return APIStartingURLContainer(url=starting_url)
 
@@ -118,6 +120,19 @@ def _handle_recipient_committee_type(recipient_committee_type: str) -> str:
 
     return recipient_committee_type
 
+def _handle_contributor_zip_code(contributor_zip: Union[int, str]) -> str:
+    contributor_zip = str(contributor_zip)
+    if contributor_zip.isnumeric():
+        if len(contributor_zip) == 4:
+            contributor_zip = f"0{contributor_zip}"
+        if len(contributor_zip) in range(6, 10):
+            contributor_zip = contributor_zip[:6]
+        if len(contributor_zip) == 5:
+            if int(contributor_zip) in all_zips:
+                return contributor_zip
+    raise ValueError("Zip code not a NYC zip code")
+    
+
 
 class DataFetcher:
     """
@@ -140,12 +155,13 @@ class DataFetcher:
 
     """
 
-    def __init__(self, two_year_transaction_period: int, recipient_committee_type: str):
+    def __init__(self, two_year_transaction_period: int, recipient_committee_type: str, contributor_zip: int):
         self.api_starting_url_container = _make_api_url(
-            two_year_transaction_period, recipient_committee_type
+            two_year_transaction_period, recipient_committee_type, contributor_zip
         )
         self.two_year_transaction_period = two_year_transaction_period
         self.recipient_committee_type = recipient_committee_type
+        self.contributor_zip = contributor_zip
         self.total_pages = _get_total_pages_for_call(self.api_starting_url_container)
         
         self.starting_url = self.api_starting_url_container.url
@@ -207,6 +223,8 @@ class DataFetcher:
                     #print("waiting 1 min")
                     time.sleep(sleep_timer)
                     self.api_calls_per_min = 1
+            except KeyboardInterrupt:
+                break
             except:
                 continue
         self._build_df()
@@ -244,26 +262,15 @@ class DataFetcher:
         
         # Pull out the data we want from each transaction on a page and add it to the complete_list
         for item in self.info["results"]:
-            contributor_zip = item["contributor_zip"]
-            try:
-                if contributor_zip.isnumeric():
-                    if len(contributor_zip) < 5:
-                        contributor_zip = 99999
-                    elif len(contributor_zip) > 5:
-                        contributor_zip = int(contributor_zip[0:5])
-                    contributor_zip = int(contributor_zip)
-                else:
-                    contributor_zip = 99999
-            except:
-                contributor_zip = 99999
-            
             self.complete_list.append(
             current_list := [
+                contribution_receipt_amount := item["contribution_receipt_amount"],
+                contributor_street_address := item["contributor_street_1"],
                 contributor_occupation := item["contributor_occupation"],
                 contributor_employer := item["contributor_employer"],
                 contributor_city := item["contributor_city"],
                 contributor_state := item["contributor_state"],
-                contributor_zip,
+                contributor_zip := item["contributor_zip"],
                 party := item["committee"]["party"],
             ]
             )
@@ -274,6 +281,8 @@ class DataFetcher:
         self.df = pd.DataFrame(
             self.complete_list,
             columns=[
+                "contribution_receipt_amount",
+                "contributor_street_address",
                 "contributor_occupation",
                 "contributor_employer",
                 "contributor_city",
@@ -283,13 +292,13 @@ class DataFetcher:
             ],
         )
         self.df.fillna(value="", inplace=True)
-     
+
     def save_df_data(self):
         files = os.listdir("data/raw_data")
         for name in files:
-            if fnmatch.fnmatch(name, pattern := f"*_{self.recipient_committee_type}_in_{self.two_year_transaction_period}.csv"):
+            if fnmatch.fnmatch(name, pattern := f"*_{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv"):
                 os.remove("data/raw_data/" + name)
-                self.df.to_csv(f'data/raw_data/{self.pages_pulled}_of_{self.total_pages}_for_{self.recipient_committee_type}_in_{self.two_year_transaction_period}.csv')
-        self.df.to_csv(f'data/raw_data/{self.pages_pulled}_of_{self.total_pages}_for_{self.recipient_committee_type}_in_{self.two_year_transaction_period}.csv') 
+                self.df.to_csv(f'data/raw_data/zipcode_{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv')
+        self.df.to_csv(f'data/raw_data/{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv') 
 
 

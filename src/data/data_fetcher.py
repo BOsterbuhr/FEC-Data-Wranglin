@@ -299,6 +299,6 @@ class DataFetcher:
             if fnmatch.fnmatch(name, pattern := f"*_{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv"):
                 os.remove("data/raw_data/" + name)
                 self.df.to_csv(f'data/raw_data/zipcode_{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv')
-        self.df.to_csv(f'data/raw_data/{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv') 
+        self.df.to_csv(f'data/raw_data/zipcode_{self.contributor_zip}_for_{self.two_year_transaction_period}{self.recipient_committee_type}.csv') 
 
 

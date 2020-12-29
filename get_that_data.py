@@ -14,7 +14,7 @@ for year in target_years:
 
 # combine all csv into one master csv
 files = os.listdir("data/raw_data")
-combined_csv = pd.concat( [ pd.read_csv(f'/Users/brodyosterbuhr/Desktop/FEC_NYC_DATA/data/raw_data/{file}', index_col=0) for file in files if fnmatch.fnmatch(file, pattern := '*.csv') ] )
+combined_csv = pd.concat( [ pd.read_csv(f'data/raw_data/{file}', index_col=0) for file in files if fnmatch.fnmatch(file, pattern := '*.csv') ] )
 combined_csv.to_csv( "data/raw_data/combined_csv.csv", index=False )
 for file in files:
     if file != "combined_csv.csv":

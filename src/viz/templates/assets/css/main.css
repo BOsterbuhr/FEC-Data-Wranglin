@@ -3950,3 +3950,11 @@ input, select, textarea {
 			opacity: 1;
 			visibility: visible;
 		}
+
+
+/* Quick utils for placement */
+
+.center-block {
+	display: block !important;
+	margin: 0 auto !important;
+}

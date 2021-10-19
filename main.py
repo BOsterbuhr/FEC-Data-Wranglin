@@ -84,7 +84,8 @@ async def display_map_results(request: Request, background_tasks: BackgroundTask
     """
     fetcher = DataFetcher(election_year, election_type, postcode[:5], state, locality)
     fetcher.api_starting_url_container
-    background_tasks.add_task(fetcher.gimmie_data, record_limit=10)
+    background_tasks.add_task(fetcher.gimmie_data)
+    background_tasks.add_task(fetcher.summarize_df)
     background_tasks.add_task(fetcher.save_df_data)
     return templates.TemplateResponse('generic.html',
                                         {"request": request,
@@ -94,7 +95,8 @@ async def display_map_results(request: Request, background_tasks: BackgroundTask
                                         "locality": locality,
                                         "state": state,
                                         "postcode": postcode,
-                                        "country": country})
+                                        "country": country,
+                                        "total_pages": fetcher.total_pages})
 
 
 if __name__ == '__main__':

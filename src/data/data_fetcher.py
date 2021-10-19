@@ -219,7 +219,7 @@ class DataFetcher:
 
                     self._get_next_page()
                     self._get_transactions_on_page()
-
+                    
                     self.pages_pulled += 1
 
                 else:
@@ -322,6 +322,18 @@ class DataFetcher:
             ],
         )
         self.df.fillna(value="", inplace=True)
+
+
+    async def summarize_df(self):
+        """
+        Summarizes the DataFrame by party and returns a DataFrame with the results.
+        """
+        df = self.df
+        print(df.info)
+        print(df.head())
+        print(df.describe())
+        return df
+
 
     async def save_df_data(self):
         files = os.listdir("data/raw_data")

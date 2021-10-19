@@ -11,6 +11,80 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<link rel="stylesheet" href="assets/css/main.css" />
 		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<script>
+			let autocomplete;
+			let address1Field;
+			let address2Field;
+			let postalField;
+
+			function initAutocomplete() {
+				address1Field = document.querySelector("#location");
+				address2Field = document.querySelector("#address2");
+				postalField = document.querySelector("#postcode");
+				// Create the autocomplete object, restricting the search predictions to
+				// addresses in the US and Canada.
+				autocomplete = new google.maps.places.Autocomplete(address1Field, {
+				componentRestrictions: { country: ["us"] },
+				fields: ["address_components", "geometry"],
+				types: ["address"],
+				});
+				address1Field.focus();
+				// When the user selects an address from the drop-down, populate the
+				// address fields in the form.
+				autocomplete.addListener("place_changed", fillInAddress);
+			}
+
+			// [START maps_places_autocomplete_addressform_fillform]
+			function fillInAddress() {
+				// Get the place details from the autocomplete object.
+				const place = autocomplete.getPlace();
+				let address1 = "";
+				let postcode = "";
+
+				// Get each component of the address from the place details,
+				// and then fill-in the corresponding field on the form.
+				// place.address_components are google.maps.GeocoderAddressComponent objects
+				// which are documented at http://goo.gle/3l5i5Mr
+				for (const component of place.address_components) {
+					const componentType = component.types[0];
+
+				switch (componentType) {
+					case "street_number": {
+						address1 = `${component.long_name} ${address1}`;
+					break;
+					}
+
+					case "route": {
+						address1 += component.short_name;
+					break;
+					}
+
+					case "postal_code": {
+						postcode = `${component.long_name}${postcode}`;
+					break;
+					}
+
+					case "postal_code_suffix": {
+						postcode = `${postcode}-${component.long_name}`;
+					break;
+					}
+					case "locality":
+						document.querySelector("#locality").value = component.long_name;
+					break;
+					case "administrative_area_level_1": {
+						document.querySelector("#state").value = component.short_name;
+					break;
+					}
+					case "country":
+						document.querySelector("#country").value = component.long_name;
+					break;
+				}
+				}
+
+				address1Field.value = address1;
+				postalField.value = postcode;
+			}
+		</script>
 	</head>
 	<body class="is-preload">
 
@@ -48,10 +122,10 @@
 								<img src="images/pic07.jpg" alt="" />
 							</span>
 							<header class="major">
-								<h1>AirBnB Optimal Price</h1>
+								<h1>Neighborhood Politics</h1>
 							</header>
 							<div class="content">
-								<p>Using historical booking data from AirBnB, AirBnB Optimal Price will allow a user to predict the trends for optimal pricing for their properties based on variables such as location, time of year and other considerations. The user will be able to manage multiple properties at different locations and be able to make adjustments to their expectations for booking, as well as what they should be charging.</p>
+								<p>Interested in seeing how much your local community spends on politics? Enter your address below along with the election year and type of political donations to find out.</p>
 							</div>
 						</div>
 					</section>
@@ -62,30 +136,63 @@
 						<!-- One -->
 							<section id="one">
 								<div class="inner">
-									<header class="major">
+									<header class="major center-block">
 										<h2>View Summary Of Local Donations</h2>
 									</header>
-									<p>In the form below input the zipcode you want donor information on. (A real 5-digit zipcode must be used or it will break, for now.)</p>
 									<section>
-										<form method="post" action="#">
+										<form id="local_doantion-form" action="/generic" method="post" autocomplete="off">
 											<div class="fields">
 												<div class="field half">
-													<label for="zipcode">Zipcode</label>
-													<input type="number" name="zipcode" id="zipcode" />
+													<h4>Choose Election Year</h4>
+													<select id="election_year" name="election_year">
+													<option value="2022">2022</option>
+													<option value="2020">2020</option>
+													<option value="2018">2018</option>
+													<option value="2016">2016</option>
+													<option value="2014">2014</option>
+													<option value="2012">2012</option>
+													<option value="2010">2010</option>
+													<option value="2008">2008</option>
+													<option value="2006">2006</option>
+													<option value="2004">2004</option>
+													</select>
 												</div>
 												<div class="field half">
-													<label for="email">Email</label>
-													<input type="text" name="email" id="email" />
+													<h4>Choose Election Type</h4>
+													<select id="election_type" name="election_type">
+													<option value="A">All Donation Info</option>
+													<option value="P">Direct Presidential Donations</option>
+													<option value="S">Direct Senate Donations</option>
+													<option value="H">Direct House Donations</option>
+													</select>
 												</div>
-												<div class="field">
-													<label for="message">Message</label>
-													<textarea name="message" id="message" rows="6"></textarea>
+												<div class="field full" style="text-align:center">
+													<h4>Enter Your Address</h4>
+												</div>
+												<div class="field quarter">
+													<input
+													type="text"
+													id="location"
+													name="location"
+													required
+													autocomplete="off"
+													/>
+												</div>
+												<input type="hidden" id="location2" name="location2" />
+												<div class="field quarter">
+													<input type="text" id="locality" name="locality" required/>
+												</div>
+												<div class="field quarter">
+													<input type="text" id="state" name="state" required />
+												</div>
+												<div class="field quarter">
+													<input type="text" id="postcode" name="postcode" required />
+												</div>
+												<input type="hidden" id="country" name="country" required />
+												<div class="field full">
+													<button type="submit" class="center-block my-button">See Local Summary</button>
 												</div>
 											</div>
-											<ul class="actions">
-												<li><input type="submit" value="Send Message" class="primary" /></li>
-												<li><input type="reset" value="Clear" /></li>
-											</ul>
 										</form>
 									</section>
 								</div>
@@ -185,6 +292,9 @@
 			<script src="assets/js/breakpoints.min.js"></script>
 			<script src="assets/js/util.js"></script>
 			<script src="assets/js/main.js"></script>
-
+			<script
+				src="https://maps.googleapis.com/maps/api/js?key={{MAPS_API_KEY}}&callback=initAutocomplete&libraries=places&v=weekly"
+				async
+			></script>
 	</body>
 </html>

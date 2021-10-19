@@ -1,7 +1,7 @@
 import os
 import uvicorn
 import json
-from fastapi import FastAPI, Request, Form
+from fastapi import BackgroundTasks, FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -67,14 +67,14 @@ async def display_elements(request: Request):
     """
     Displays the map page
     """
-    return templates.TemplateResponse('map.html', {"request": request, "MAPS_API_KEY": os.environ.get("MAPS_API_KEY")})
+    return templates.TemplateResponse('map_landing.html', {"request": request, "MAPS_API_KEY": os.environ.get("MAPS_API_KEY")})
 
 
 @app.post('/generic', response_class=HTMLResponse)
-async def display_map_results(request: Request,
+async def display_map_results(request: Request, background_tasks: BackgroundTasks,
                             election_year: str = Form(...),
                             election_type: str = Form(...),
-                            ship_address: str = Form(...),
+                            location: str = Form(...),
                             locality: str = Form(...),
                             state: str = Form(...),
                             postcode: str = Form(...),
@@ -82,19 +82,21 @@ async def display_map_results(request: Request,
     """
     Displays the generic page with map results
     """
-    fetcher = DataFetcher(election_year, election_type, None, state, None)
+    fetcher = DataFetcher(election_year, election_type, postcode[:5], state, locality)
     fetcher.api_starting_url_container
-    fetcher.gimmie_data(record_limit=100)
-    fetcher.save_df_data() 
+    background_tasks.add_task(fetcher.gimmie_data)
+    background_tasks.add_task(fetcher.summarize_df)
+    background_tasks.add_task(fetcher.save_df_data)
     return templates.TemplateResponse('generic.html',
                                         {"request": request,
                                         "election_year": election_year,
                                         "election_type": election_type,
-                                        "ship_address": ship_address,
+                                        "ship_address": location,
                                         "locality": locality,
                                         "state": state,
                                         "postcode": postcode,
-                                        "country": country})
+                                        "country": country,
+                                        "total_pages": fetcher.total_pages})
 
 
 if __name__ == '__main__':
